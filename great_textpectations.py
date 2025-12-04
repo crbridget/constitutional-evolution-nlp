@@ -139,17 +139,12 @@ class Textpectations:
             for word, count in topk:
                 rows.append([doc_label, word, count])
         df = pd.DataFrame(rows, columns=["Document", "Word", "Count"])
-
-        fig = sankey.make_sankey(df, "Document", "Word", "Count")
-        fig.update_layout(title_text="Word Frequency Sankey Diagram", font_size=10)
-        fig.write_html('sankey_diagram.html')
-
         sankey.show_sankey(df, "Document", "Word", "Count")
 
     def topic_bar_plots(self, n_topics=6):
         """Topic modeling subplots using sklearn LDA"""
 
-        # Reconstruct texts
+        # Step 1: Reconstruct texts
         texts = []
         labels = []
 
@@ -158,11 +153,11 @@ class Textpectations:
             texts.append(text)
             labels.append(label)
 
-        # Create document-term matrix
+        # Step 2: Create document-term matrix
         vectorizer = CountVectorizer(max_features=1000)
         doc_term_matrix = vectorizer.fit_transform(texts)
 
-        # Run LDA
+        # Step 3: Run LDA
         lda = LatentDirichletAllocation(
             n_components=n_topics,
             random_state=42,
@@ -170,7 +165,7 @@ class Textpectations:
         )
         doc_topics = lda.fit_transform(doc_term_matrix)
 
-        # Create subplots
+        # Step 4: Create subplots
         n_docs = len(labels)
         n_cols = 3
         n_rows = (n_docs + n_cols - 1) // n_cols
@@ -193,17 +188,15 @@ class Textpectations:
 
         plt.tight_layout()
         plt.suptitle('Topic Distribution by Document', fontsize=14, y=1.02)
+        plt.show()
 
         # Print topics
-        print("\nTopic Descriptions ")
+        print("\n=== Topic Descriptions ===")
         feature_names = vectorizer.get_feature_names_out()
         for topic_idx, topic in enumerate(lda.components_):
             top_words_idx = topic.argsort()[-10:][::-1]
             top_words = [feature_names[i] for i in top_words_idx]
             print(f"\nTopic {topic_idx}: {', '.join(top_words)}")
-
-        plt.savefig('topic_distribution.png', dpi=300, bbox_inches='tight')
-        plt.show()
 
 
     def similarity_scatterplot(self):
@@ -232,20 +225,18 @@ class Textpectations:
         reducer = umap.UMAP(n_components=2, random_state=42, n_neighbors=3)
         coords = reducer.fit_transform(tfidf_matrix.toarray())
 
-        # Plot
+        # Plot - should use coords, not doc_topics!
         plt.figure(figsize=(10, 8))
         plt.scatter(coords[:, 0], coords[:, 1], s=100, alpha=0.6)
 
         for i, label in enumerate(labels):  # ← Just label, not topics!
             plt.annotate(label,
-                            (coords[i, 0], coords[i, 1]),
-                            fontsize=9,
-                            ha='center')
+                             (coords[i, 0], coords[i, 1]),
+                             fontsize=9,
+                             ha='center')
 
         plt.xlabel('Dimension 1')
         plt.ylabel('Dimension 2')
         plt.title('Constitutional Document Similarity (TF-IDF + UMAP)')
         plt.tight_layout()
-
-        plt.savefig('similarity_scatterplot.png', dpi=300, bbox_inches='tight')
         plt.show()

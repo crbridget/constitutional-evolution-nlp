@@ -1,6 +1,8 @@
-
 """
 File: textpectations_parsers.py
+Description: Custom parsers for text extraction and preprocessing from various file formats.
+Handles JSON and PDF files, applying stopword filtering, punctuation removal, and
+structural element cleaning for NLP analysis.
 """
 
 import json
@@ -15,6 +17,16 @@ def is_roman_numeral(word):
 
 
 def json_parser(filename, stopwords=None):
+    """
+        Parse JSON file and extract word counts.
+
+        Args:
+            filename (str): Path to JSON file
+            stopwords (set): Optional set of words to filter out
+
+        Returns:
+            dict: {'wordcount': Counter object, 'numwords': int}
+        """
     f = open(filename)
     raw = json.load(f)
     text = raw['text']
@@ -36,6 +48,16 @@ def json_parser(filename, stopwords=None):
     return {'wordcount': Counter(words), 'numwords': len(words)}
 
 def pdf_parser(filename, stopwords=None):
+    """
+        Parse PDF file and extract word counts from all pages.
+
+        Args:
+            filename (str): Path to PDF file
+            stopwords (set): Optional set of words to filter out
+
+        Returns:
+            dict: {'wordcount': Counter object, 'numwords': int}
+        """
     # open/read PDF file
     reader = PdfReader(filename)
 
