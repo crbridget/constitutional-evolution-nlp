@@ -8,6 +8,40 @@ import random as rnd
 import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
 
+#Needed libraries
+#pip install nltk spacy gensim
+#python -m spacy download en_core_web_sm
+#pip install umap-learn
+#pip install scikit-learn
+#pip install plotly
+
+
+#Data Handling 
+import os
+from collections import Counter
+import re
+
+#Basic
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+#pdf parsing 
+from pypdf import PdfReader
+
+#lda 
+from gensim import corpora, models
+#tf idf
+from sklearn.feature_extraction.text import TfidfVectorizer
+#dimension reduction???
+import umap.umap_ as umap
+#sankey 
+import plotly.graph_objects as go
+
+
+
+
 
 class Textpectations:
 
