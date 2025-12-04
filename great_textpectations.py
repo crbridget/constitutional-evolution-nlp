@@ -115,11 +115,9 @@ class Textpectations:
 
 
     def wordcount_sankey(self, word_list=None, k=5):
-        # Map each text to words using a Sankey diagram, where the thickness of the line
-        # is the number of times that word occurs in the text. Users can specify a particular
-        # set of words, or the words can be the union of the k most common words across
+        # Map each text to words using a Sankey diagram, where the thickness of the line is the number of times that word occurs in the text. Users can specify a particular
+        # set of words, or the words can be the union of the k most common words in
         # each text file (excluding stop words)
-        #putting them together
 
         all_wordcounts = self.data["wordcount"]
         topk_per_doc = {}  # stores top k words for each document
