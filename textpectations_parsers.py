@@ -1,28 +1,41 @@
 
 """
-An example of a custom domain-specific parser
+File: textpectations_parsers.py
 """
 
 import json
+import string
+import re
 from collections import Counter
 from pypdf import PdfReader
 
-def json_parser(filename):
+def is_roman_numeral(word):
+    """Check if word is a Roman numeral"""
+    return bool(re.match(r'^[ivxlcdm]+$', word))
+
+
+def json_parser(filename, stopwords=None):
     f = open(filename)
     raw = json.load(f)
     text = raw['text']
-    words = text.split(" ")
-    wc = Counter(words)
-    num = len(words)
+
+    # Clean text
+    text = text.lower()
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    words = text.split()
+
+    # Filter
+    if stopwords:
+        words = [word for word in words
+                 if word not in stopwords
+                 and len(word) > 2
+                 and not any(char.isdigit() for char in word)
+                 and not is_roman_numeral(word)]
+
     f.close()
-    return {'wordcount':wc, 'numwords':num}
+    return {'wordcount': Counter(words), 'numwords': len(words)}
 
-
-from pypdf import PdfReader
-from collections import Counter
-
-
-def pdf_parser(filename):
+def pdf_parser(filename, stopwords=None):
     # open/read PDF file
     reader = PdfReader(filename)
 
@@ -31,20 +44,21 @@ def pdf_parser(filename):
     for page in reader.pages:  # Loop through each page
         text += page.extract_text()  # Add each page's text
 
-    # preprocess text (split into words)
+    # clean text
+    text = text.lower()
+    text = text.translate(str.maketrans('', '', string.punctuation))
+
     words = text.split()
 
-    # count words using counter
-    wc = Counter(words)
 
-    # calculate total number of words
-    num = len(words)
+    # filter stopwords if provided
+    if stopwords:
+        words = [word for word in words
+                 if word not in stopwords
+                 and len(word) > 2
+                 and not any(char.isdigit() for char in word)
+                 and not is_roman_numeral(word)]
 
-    # return in dict format
-    return {'wordcount': wc, 'numwords': num}
-
-
-# Test it
-result = pdf_parser("france_1791.pdf")
-print(f"Total words: {result['numwords']}")
-print(f"Top 10 words: {result['wordcount'].most_common(10)}")
+        # return in dict format
+    return {'wordcount': Counter(words),
+            'numwords': len(words)}

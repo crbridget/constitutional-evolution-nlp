@@ -7,6 +7,8 @@ from collections import Counter, defaultdict
 import random as rnd
 import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
+import string
+import textpectations_parsers as tp
 
 #Needed libraries
 #pip install nltk spacy gensim
@@ -45,26 +47,50 @@ import plotly.graph_objects as go
 
 class Textpectations:
 
-    def __init__(self):
-        """ Constructor to initialize state """
-
-        # Where all the data extracted from the loaded documents is stored
-        self.data = defaultdict(dict)
-
     @staticmethod
     def load_stop_words(stopfile):
         # A list of common or stop words. These get filtered from each file automatically
         english_stopwords = stopwords.words('english')
 
+        if stopfile:
+            with open(stopfile, 'r') as f:
+                custom_stopwords = set(line.strip().lower() for line in f)
+            # Combine both sets
+            all_stopwords = english_stopwords.union(custom_stopwords)
+        else:
+            all_stopwords = english_stopwords
+
+        return all_stopwords
+
+    def __init__(self, stopfile=None):
+        """ Constructor to initialize state """
+
+        # Where all the data extracted from the loaded documents is stored
+        self.data = defaultdict(dict)
+
+        # Load stopwords once at initialization
+        self.stopwords = Textpectations.load_stop_words(stopfile)
+
     @staticmethod
-    def default_parser(filename):
+    def default_parser(filename, stopwords=None):
         """ For processing plain text files (.txt) """
         with open(filename, 'r') as file:
-            results = file.read()
+            results = file.read().lower()
+
+        results = results.translate(str.maketrans('', '', string.punctuation))
+
+        words = results.split()
+
+        if stopwords:
+            words = [word for word in words
+                 if word not in stopwords
+                 and len(word) > 2
+                 and not any(char.isdigit() for char in word)
+                 and not tp.is_roman_numeral(word)]
 
         results = {
-            'wordcount': Counter(results.split(" ")),
-            'numwords': len(results.split())
+            'wordcount': Counter(words),
+            'numwords': len(words)
         }
 
         print("Parsed ", filename, ": ", results)
@@ -74,9 +100,9 @@ class Textpectations:
         """ Register a text document with the framework.
          Extract and store data to be used later in our visualizations. """
         if parser is None:
-            results = Textpectations.default_parser(filename)
+            results = Textpectations.default_parser(filename, self.stopwords)
         else:
-            results = parser(filename)
+            results = parser(filename, self.stopwords)
 
         # Use filename for the label if none is provided
         if label is None:
@@ -86,6 +112,7 @@ class Textpectations:
         # For example, document A:  numwords=10,  document B: numwords=20
         # For A, the results are: {numwords:10}, for B: {numwords:20}
         # This gets stored as: {numwords: {A:10, B:20}}
+
 
         for k, v in results.items():
             self.data[k][label] = v
