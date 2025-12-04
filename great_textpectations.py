@@ -7,6 +7,7 @@ from collections import Counter, defaultdict
 import random as rnd
 import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
+import sankey
 import string
 import textpectations_parsers as tp
 
@@ -108,15 +109,8 @@ class Textpectations:
             self.data[k][label] = v
 
 
-    # REMOVE BEFORE SUBMIT
-    def compare_num_words(self):
-        """ A very simplistic visualization that creates
-        a bar chart comparing num words for each text file
-        For HW7, I expect much more interesting visualizations """
-        numwords = self.data['numwords']
-        for label, nw in numwords.items():
-            plt.bar(label, nw)
-        plt.show()
+
+
 
     def wordcount_sankey(self, word_list=None, k=5):
         # Map each text to words using a Sankey diagram, where the thickness of the line
@@ -124,14 +118,30 @@ class Textpectations:
         # set of words, or the words can be the union of the k most common words across
         # each text file (excluding stop words)
         #putting them together
-        all_wordcounts=self.data["wordcount"]
-        
+
+        all_wordcounts = self.data["wordcount"]
+        topk_per_doc = {}  # stores top k words for each document
+
+        for doc_label, wc in all_wordcounts.items():
+            # get the top k words for this document
+            topk = wc.most_common(k)
+            topk_per_doc[doc_label] = topk
+        unique_words = set()
+
+        for doc_label, topk in topk_per_doc.items():
+            for word, count in topk:
+                unique_words.add(word)
+        rows = []
+
+        for doc_label, topk in topk_per_doc.items():
+            for word, count in topk:
+                rows.append([doc_label, word, count])
+        df = pd.DataFrame(rows, columns=["Document", "Word", "Count"])
+        sankey.show_sankey(df, "Document", "Word", "Count")
 
 
 
 
-
-        pass
 
     def second_visualization(self):
         # A visualization array of subplots with one subplot for each text file.

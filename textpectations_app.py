@@ -26,6 +26,7 @@ def main():
     tt.similarity_scatterplot()
 
     pp.pprint(tt.data)
+    tt.wordcount_sankey()
 
 
 
