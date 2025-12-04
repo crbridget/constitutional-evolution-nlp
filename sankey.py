@@ -5,7 +5,6 @@ pio.renderers.default = 'browser'
 
 
 def _code_mapping(df, src, targ):
-    """ Map labels in src and targ columns to integers """
 
     labels = pd.concat([df[src], df[targ]]).unique().tolist()
 
