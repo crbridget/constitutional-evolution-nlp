@@ -154,7 +154,7 @@ class Textpectations:
         
         pass
 
-    def third_visualization(self):
+    def similarity_scatterplot(self):
         # A single visualization that overlays data from each of the text files. Make sure your
         # visualization distinguishes the data from each text file using labels or a legend
 
@@ -163,8 +163,36 @@ class Textpectations:
         # close together = constituions with similar vocab/themes
         # far apart = very different vocab themes
 
-        pass
+        texts = []
+        labels = []
 
+        for label, counter in self.data['wordcount'].items():
+            # Reconstruct text by repeating each word by its count
+            text = ' '.join([word for word, count in counter.items()
+                             for _ in range(count)])
+            texts.append(text)
+            labels.append(label)
+
+        vectorizer = TfidfVectorizer(max_features=500)
+        tfidf_matrix = vectorizer.fit_transform(texts)
+
+        reducer = umap.UMAP(n_components=2, random_state=42, n_neighbors=3)
+        coords_2d = reducer.fit_transform(tfidf_matrix.toarray())
+
+        plt.figure(figsize=(10, 8))
+        plt.scatter(coords_2d[:, 0], coords_2d[:, 1], s=100, alpha=0.6)
+
+        for i, label in enumerate(labels):
+            plt.annotate(label,
+                         (coords_2d[i, 0], coords_2d[i, 1]),
+                         fontsize=10,
+                         ha='center')
+
+        plt.xlabel('Dimension 1')
+        plt.ylabel('Dimension 2')
+        plt.title('Constitutional Document Similarity (TF-IDF + UMAP)')
+        plt.tight_layout()
+        plt.show()
 
 
 
