@@ -10,14 +10,6 @@ from nltk.corpus import stopwords
 import string
 import textpectations_parsers as tp
 
-#Needed libraries
-#pip install nltk spacy gensim
-#python -m spacy download en_core_web_sm
-#pip install umap-learn
-#pip install scikit-learn
-#pip install plotly
-
-
 #Data Handling 
 import os
 from collections import Counter
@@ -40,8 +32,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import umap.umap_ as umap
 #sankey 
 import plotly.graph_objects as go
-
-
 
 
 
