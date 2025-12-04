@@ -25,8 +25,6 @@ def main():
 
     tt.similarity_scatterplot()
 
-    # pp.pprint(tt.data)
-
     tt.wordcount_sankey()
 
     tt.topic_bar_plots()

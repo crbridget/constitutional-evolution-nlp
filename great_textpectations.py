@@ -1,249 +1,164 @@
 """
-great_textpectations.py:  An extensible framework for comparative text analysis
+great_textpectations.py
+framework for comparing and visualizing text documents.
 """
 
-
 from collections import Counter, defaultdict
-import random as rnd
 import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
 import sankey
 import string
 import textpectations_parsers as tp
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
-
-#Data Handling 
-import os
-from collections import Counter
-import re
-
-#Basic
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-#pdf parsing 
-from pypdf import PdfReader
-
-#lda 
-from gensim import corpora, models
-#tf idf
-from sklearn.feature_extraction.text import TfidfVectorizer
-#dimension reduction???
 import umap.umap_ as umap
-#sankey 
-import plotly.graph_objects as go
-
 
 
 class Textpectations:
+    """
+    Load, analyze, and visualize multiple text documents.
+    """
 
     @staticmethod
     def load_stop_words(stopfile):
-        # A list of common or stop words. These get filtered from each file automatically
-        english_stopwords = stopwords.words('english')
-
+        """
+        Load default stopwords
+        """
+        sw = set(stopwords.words('english'))
         if stopfile:
             with open(stopfile, 'r') as f:
-                custom_stopwords = set(line.strip().lower() for line in f)
-            # Combine both sets
-            all_stopwords = english_stopwords.union(custom_stopwords)
-        else:
-            all_stopwords = english_stopwords
-
-        return all_stopwords
+                sw.update(line.strip().lower() for line in f)
+        return sw
 
     def __init__(self, stopfile=None):
-        """ Constructor to initialize state """
-
-        # Where all the data extracted from the loaded documents is stored
+        """
+        Initialize storage and stopword list
+        """
         self.data = defaultdict(dict)
-
-        # Load stopwords once at initialization
-        self.stopwords = Textpectations.load_stop_words(stopfile)
+        self.stopwords = self.load_stop_words(stopfile)
 
     @staticmethod
     def default_parser(filename, stopwords=None):
-        """ For processing plain text files (.txt) """
+        """
+        parser for .txt files: lowercase, remove punctuation, split, filter, count.
+        """
         with open(filename, 'r') as file:
-            results = file.read().lower()
+            text = file.read().lower()
 
-        results = results.translate(str.maketrans('', '', string.punctuation))
-
-        words = results.split()
+        text = text.translate(str.maketrans('', '', string.punctuation))
+        words = text.split()
 
         if stopwords:
-            words = [word for word in words
-                 if word not in stopwords
-                 and len(word) > 2
-                 and not any(char.isdigit() for char in word)
-                 and not tp.is_roman_numeral(word)]
+            words = [
+                w for w in words
+                if w not in stopwords
+                and len(w) > 2
+                and not any(ch.isdigit() for ch in w)
+                and not tp.is_roman_numeral(w)
+            ]
 
-        results = {
-            'wordcount': Counter(words),
-            'numwords': len(words)
+        return {
+            "wordcount": Counter(words),
+            "numwords": len(words)
         }
 
-        print("Parsed ", filename, ": ", results)
-        return results
-
     def load_text(self, filename, label=None, parser=None):
-        """ Register a text document with the framework.
-         Extract and store data to be used later in our visualizations. """
+        """
+        Load a file, parse it, and store wordcount + metadata.
+        """
         if parser is None:
-            results = Textpectations.default_parser(filename, self.stopwords)
+            results = self.default_parser(filename, self.stopwords)
         else:
             results = parser(filename, self.stopwords)
 
-        # Use filename for the label if none is provided
         if label is None:
             label = filename
 
-        # Store the results for that ONE document into self.data
-        # For example, document A:  numwords=10,  document B: numwords=20
-        # For A, the results are: {numwords:10}, for B: {numwords:20}
-        # This gets stored as: {numwords: {A:10, B:20}}
+        for key, value in results.items():
+            self.data[key][label] = value
 
 
-        for k, v in results.items():
-            self.data[k][label] = v
+    # SANKEY DIAGRAM
 
-
-
-
-
-    def wordcount_sankey(self, word_list=None, k=5):
-        # Map each text to words using a Sankey diagram, where the thickness of the line is the number of times that word occurs in the text. Users can specify a particular
-        # set of words, or the words can be the union of the k most common words in
-        # each text file (excluding stop words)
-
-        all_wordcounts = self.data["wordcount"]
-        topk_per_doc = {}  # stores top k words for each document
-
-        for doc_label, wc in all_wordcounts.items():
-            # get the top k words for this document
-            topk = wc.most_common(k)
-            topk_per_doc[doc_label] = topk
-        unique_words = set()
-
-        for doc_label, topk in topk_per_doc.items():
-            for word, count in topk:
-                unique_words.add(word)
+    def wordcount_sankey(self, k=5):
+        """
+        Show a Sankey diagram linking each document to its top-k words.
+        """
         rows = []
+        wc_dict = self.data["wordcount"]
 
-        for doc_label, topk in topk_per_doc.items():
-            for word, count in topk:
-                rows.append([doc_label, word, count])
+        for label, wc in wc_dict.items():
+            for word, count in wc.most_common(k):
+                rows.append([label, word, count])
+
         df = pd.DataFrame(rows, columns=["Document", "Word", "Count"])
 
         fig = sankey.make_sankey(df, "Document", "Word", "Count")
-        fig.update_layout(title_text="Word Frequency Sankey Diagram", font_size=10)
-        fig.write_html('sankey_diagram.html')
-
+        fig.write_html("sankey_diagram.html")
         sankey.show_sankey(df, "Document", "Word", "Count")
 
+
+    # TOPIC MODELING, 2nd visualization
+
     def topic_bar_plots(self, n_topics=6):
-        """Topic modeling subplots using sklearn LDA"""
+        """
+        Create bar plots showing topic proportions for each document (LDA).
+        """
+        texts = [' '.join(c.elements()) for c in self.data["wordcount"].values()]
+        labels = list(self.data["wordcount"].keys())
 
-        # Reconstruct texts
-        texts = []
-        labels = []
+        vec = CountVectorizer(max_features=1000)
+        dtm = vec.fit_transform(texts)
 
-        for label, counter in self.data['wordcount'].items():
-            text = ' '.join(counter.elements())
-            texts.append(text)
-            labels.append(label)
+        lda = LatentDirichletAllocation(n_components=n_topics, random_state=42)
+        doc_topics = lda.fit_transform(dtm)
 
-        # Create document-term matrix
-        vectorizer = CountVectorizer(max_features=1000)
-        doc_term_matrix = vectorizer.fit_transform(texts)
-
-        # Run LDA
-        lda = LatentDirichletAllocation(
-            n_components=n_topics,
-            random_state=42,
-            max_iter=20
-        )
-        doc_topics = lda.fit_transform(doc_term_matrix)
-
-        # Create subplots
+        # Setup subplot grid
         n_docs = len(labels)
-        n_cols = 3
-        n_rows = (n_docs + n_cols - 1) // n_cols
-
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, n_rows * 4))
+        rows = (n_docs + 2) // 3
+        fig, axes = plt.subplots(rows, 3, figsize=(15, 4 * rows))
         axes = axes.flatten()
 
         for i, (label, topics) in enumerate(zip(labels, doc_topics)):
             ax = axes[i]
-            ax.bar(range(n_topics), topics, color='steelblue')
-            ax.set_title(label, fontsize=10, fontweight='bold')
-            ax.set_xlabel('Topic')
-            ax.set_ylabel('Proportion')
-            ax.set_ylim([0, 1])
-            ax.set_xticks(range(n_topics))
+            ax.bar(range(n_topics), topics)
+            ax.set_title(label)
+            ax.set_ylim(0, 1)
 
-        # Hide empty subplots
         for i in range(n_docs, len(axes)):
-            axes[i].axis('off')
+            axes[i].axis("off")
 
         plt.tight_layout()
-        plt.suptitle('Topic Distribution by Document', fontsize=14, y=1.02)
-
-        # Print topics
-        print("\nTopic Descriptions ")
-        feature_names = vectorizer.get_feature_names_out()
-        for topic_idx, topic in enumerate(lda.components_):
-            top_words_idx = topic.argsort()[-10:][::-1]
-            top_words = [feature_names[i] for i in top_words_idx]
-            print(f"\nTopic {topic_idx}: {', '.join(top_words)}")
-
-        plt.savefig('topic_distribution.png', dpi=300, bbox_inches='tight')
+        plt.savefig("topic_distribution.png", dpi=300)
         plt.show()
 
+    # TF-IDF + UMAP SIMILARITY PLOT
 
     def similarity_scatterplot(self):
-        # A single visualization that overlays data from each of the text files. Make sure your
-        # visualization distinguishes the data from each text file using labels or a legend
+        """
+        Visualize document similarity in a plot using TF-IDF + UMAP.
+        """
+        texts = [' '.join(c.elements()) for c in self.data["wordcount"].values()]
+        labels = list(self.data["wordcount"].keys())
 
-        # 2D Embedding Scatter Plot
-        # TF-IDF vectors (convert text -> numbers) + UMAP (compress high-dimensional data into 2D while preserving similarity relationships)
-        # close together = constituions with similar vocab/themes
-        # far apart = very different vocab themes
+        vec = TfidfVectorizer(max_features=500)
+        tfidf = vec.fit_transform(texts)
 
-        # Reconstruct texts
-        texts = []
-        labels = []
+        reducer = umap.UMAP(n_components=2, random_state=42)
+        coords = reducer.fit_transform(tfidf.toarray())
 
-        for label, counter in self.data['wordcount'].items():
-            text = ' '.join(counter.elements())
-            texts.append(text)
-            labels.append(label)
-
-        # TF-IDF
-        vectorizer = TfidfVectorizer(max_features=500)
-        tfidf_matrix = vectorizer.fit_transform(texts)
-
-        # UMAP
-        reducer = umap.UMAP(n_components=2, random_state=42, n_neighbors=3)
-        coords = reducer.fit_transform(tfidf_matrix.toarray())
-
-        # Plot
         plt.figure(figsize=(10, 8))
-        plt.scatter(coords[:, 0], coords[:, 1], s=100, alpha=0.6)
+        plt.scatter(coords[:, 0], coords[:, 1], s=100, alpha=0.7)
 
-        for i, label in enumerate(labels):  # ← Just label, not topics!
+        for i, label in enumerate(labels):  
             plt.annotate(label,
-                            (coords[i, 0], coords[i, 1]),
-                            fontsize=9,
-                            ha='center')
+                         (coords[i, 0], coords[i, 1]),
+                         fontsize=9,
+                         ha='center')
 
         plt.xlabel('Dimension 1')
         plt.ylabel('Dimension 2')
         plt.title('Constitutional Document Similarity (TF-IDF + UMAP)')
         plt.tight_layout()
-
-        plt.savefig('similarity_scatterplot.png', dpi=300, bbox_inches='tight')
         plt.show()
