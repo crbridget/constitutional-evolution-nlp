@@ -151,7 +151,7 @@ class Textpectations:
         plt.figure(figsize=(10, 8))
         plt.scatter(coords[:, 0], coords[:, 1], s=100, alpha=0.7)
 
-        for i, label in enumerate(labels):
+        for i, label in enumerate(labels):  
             plt.annotate(label,
                          (coords[i, 0], coords[i, 1]),
                          fontsize=9,
