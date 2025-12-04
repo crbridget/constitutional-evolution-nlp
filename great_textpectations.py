@@ -7,6 +7,7 @@ from collections import Counter, defaultdict
 import random as rnd
 import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
+
 import string
 import textpectations_parsers as tp
 
@@ -135,7 +136,8 @@ class Textpectations:
         # each text file (excluding stop words)
         #putting them together
         all_wordcounts=self.data["wordcount"]
-        
+        print(all_wordcounts)
+
 
 
 
