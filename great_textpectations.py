@@ -77,11 +77,23 @@ class Textpectations:
     def second_visualization(self):
         # A visualization array of subplots with one subplot for each text file.
         # Rendering subplots is a good, advanced skill to know!
+
+        # topic modeling subplots - each subplot shows the topic distrubtion for that document (as a bar chart)
+        # run LDA on entire corpus -> discover 5-8 topics automatically
+        # topics are word clusters
+        # each subplot shows % of document devoted to each topic
+        
         pass
 
     def third_visualization(self):
         # A single visualization that overlays data from each of the text files. Make sure your
         # visualization distinguishes the data from each text file using labels or a legend
+
+        # 2D Embedding Scatter Plot
+        # TF-IDF vectors (convert text -> numbers) + UMAP (compress high-dimensional data into 2D while preserving similarity relationships)
+        # close together = constituions with similar vocab/themes
+        # far apart = very different vocab themes
+
         pass
 
 
