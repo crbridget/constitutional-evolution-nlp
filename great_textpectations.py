@@ -106,6 +106,14 @@ class Textpectations:
         # is the number of times that word occurs in the text. Users can specify a particular
         # set of words, or the words can be the union of the k most common words across
         # each text file (excluding stop words)
+        #putting them together
+        all_wordcounts=self.data["wordcount"]
+        
+
+
+
+
+
         pass
 
     def second_visualization(self):
