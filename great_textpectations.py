@@ -10,6 +10,8 @@ from nltk.corpus import stopwords
 import sankey
 import string
 import textpectations_parsers as tp
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
 
 #Data Handling 
 import os
@@ -137,22 +139,72 @@ class Textpectations:
             for word, count in topk:
                 rows.append([doc_label, word, count])
         df = pd.DataFrame(rows, columns=["Document", "Word", "Count"])
+
+        fig = sankey.make_sankey(df, "Document", "Word", "Count")
+        fig.update_layout(title_text="Word Frequency Sankey Diagram", font_size=10)
+        fig.write_html('sankey_diagram.html')
+
         sankey.show_sankey(df, "Document", "Word", "Count")
 
+    def topic_bar_plots(self, n_topics=6):
+        """Topic modeling subplots using sklearn LDA"""
 
+        # Reconstruct texts
+        texts = []
+        labels = []
 
+        for label, counter in self.data['wordcount'].items():
+            text = ' '.join(counter.elements())
+            texts.append(text)
+            labels.append(label)
 
+        # Create document-term matrix
+        vectorizer = CountVectorizer(max_features=1000)
+        doc_term_matrix = vectorizer.fit_transform(texts)
 
-    def second_visualization(self):
-        # A visualization array of subplots with one subplot for each text file.
-        # Rendering subplots is a good, advanced skill to know!
+        # Run LDA
+        lda = LatentDirichletAllocation(
+            n_components=n_topics,
+            random_state=42,
+            max_iter=20
+        )
+        doc_topics = lda.fit_transform(doc_term_matrix)
 
-        # topic modeling subplots - each subplot shows the topic distrubtion for that document (as a bar chart)
-        # run LDA on entire corpus -> discover 5-8 topics automatically
-        # topics are word clusters
-        # each subplot shows % of document devoted to each topic
-        
-        pass
+        # Create subplots
+        n_docs = len(labels)
+        n_cols = 3
+        n_rows = (n_docs + n_cols - 1) // n_cols
+
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, n_rows * 4))
+        axes = axes.flatten()
+
+        for i, (label, topics) in enumerate(zip(labels, doc_topics)):
+            ax = axes[i]
+            ax.bar(range(n_topics), topics, color='steelblue')
+            ax.set_title(label, fontsize=10, fontweight='bold')
+            ax.set_xlabel('Topic')
+            ax.set_ylabel('Proportion')
+            ax.set_ylim([0, 1])
+            ax.set_xticks(range(n_topics))
+
+        # Hide empty subplots
+        for i in range(n_docs, len(axes)):
+            axes[i].axis('off')
+
+        plt.tight_layout()
+        plt.suptitle('Topic Distribution by Document', fontsize=14, y=1.02)
+
+        # Print topics
+        print("\nTopic Descriptions ")
+        feature_names = vectorizer.get_feature_names_out()
+        for topic_idx, topic in enumerate(lda.components_):
+            top_words_idx = topic.argsort()[-10:][::-1]
+            top_words = [feature_names[i] for i in top_words_idx]
+            print(f"\nTopic {topic_idx}: {', '.join(top_words)}")
+
+        plt.savefig('topic_distribution.png', dpi=300, bbox_inches='tight')
+        plt.show()
+
 
     def similarity_scatterplot(self):
         # A single visualization that overlays data from each of the text files. Make sure your
@@ -163,42 +215,37 @@ class Textpectations:
         # close together = constituions with similar vocab/themes
         # far apart = very different vocab themes
 
+        # Reconstruct texts
         texts = []
         labels = []
 
         for label, counter in self.data['wordcount'].items():
-            # Reconstruct text by repeating each word by its count
-            text = ' '.join([word for word, count in counter.items()
-                             for _ in range(count)])
+            text = ' '.join(counter.elements())
             texts.append(text)
             labels.append(label)
 
+        # TF-IDF
         vectorizer = TfidfVectorizer(max_features=500)
         tfidf_matrix = vectorizer.fit_transform(texts)
 
+        # UMAP
         reducer = umap.UMAP(n_components=2, random_state=42, n_neighbors=3)
-        coords_2d = reducer.fit_transform(tfidf_matrix.toarray())
+        coords = reducer.fit_transform(tfidf_matrix.toarray())
 
+        # Plot
         plt.figure(figsize=(10, 8))
-        plt.scatter(coords_2d[:, 0], coords_2d[:, 1], s=100, alpha=0.6)
+        plt.scatter(coords[:, 0], coords[:, 1], s=100, alpha=0.6)
 
-        for i, label in enumerate(labels):
+        for i, label in enumerate(labels):  # ← Just label, not topics!
             plt.annotate(label,
-                         (coords_2d[i, 0], coords_2d[i, 1]),
-                         fontsize=10,
-                         ha='center')
+                            (coords[i, 0], coords[i, 1]),
+                            fontsize=9,
+                            ha='center')
 
         plt.xlabel('Dimension 1')
         plt.ylabel('Dimension 2')
         plt.title('Constitutional Document Similarity (TF-IDF + UMAP)')
         plt.tight_layout()
+
+        plt.savefig('similarity_scatterplot.png', dpi=300, bbox_inches='tight')
         plt.show()
-
-
-
-
-
-
-
-
-
