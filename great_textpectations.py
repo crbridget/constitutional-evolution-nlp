@@ -104,6 +104,7 @@ class Textpectations:
     def topic_bar_plots(self, n_topics=6):
         """
         Create bar plots showing topic proportions for each document (LDA).
+        Prints top words for each topic to console.
         """
         texts = [' '.join(c.elements()) for c in self.data["wordcount"].values()]
         labels = list(self.data["wordcount"].keys())
@@ -130,14 +131,25 @@ class Textpectations:
             axes[i].axis("off")
 
         plt.tight_layout()
-        plt.savefig("topic_distribution.png", dpi=300)
+
+        # Print topic descriptions before showing plot
+        print("TOPIC DESCRIPTIONS")
+
+        feature_names = vec.get_feature_names_out()
+        for topic_idx, topic in enumerate(lda.components_):
+            top_words_idx = topic.argsort()[-10:][::-1]
+            top_words = [feature_names[i] for i in top_words_idx]
+            print(f"\nTopic {topic_idx}: {', '.join(top_words)}")
+
+        plt.savefig("topic_distribution.png", dpi=300, bbox_inches='tight')
         plt.show()
+
 
     # TF-IDF + UMAP SIMILARITY PLOT
 
     def similarity_scatterplot(self):
         """
-        Visualize document similarity in a plot using TF-IDF + UMAP.
+        Visualize document similarity in a 2D plot using TF-IDF + UMAP.
         """
         texts = [' '.join(c.elements()) for c in self.data["wordcount"].values()]
         labels = list(self.data["wordcount"].keys())
@@ -161,4 +173,5 @@ class Textpectations:
         plt.ylabel('Dimension 2')
         plt.title('Constitutional Document Similarity (TF-IDF + UMAP)')
         plt.tight_layout()
+        plt.savefig('similarity_scatterplot.png', dpi=300, bbox_inches='tight')
         plt.show()
