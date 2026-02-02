@@ -78,5 +78,3 @@ The framework reveals:
 - **Cross-cultural influences** through shared terminology and concepts
 
 ---
-
-*Built as part of data science coursework exploring NLP applications in political science and comparative government.*
